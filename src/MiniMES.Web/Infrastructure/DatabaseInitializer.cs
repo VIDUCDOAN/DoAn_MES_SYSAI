@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
 using MiniMES.Web.Models;
 using MiniMES.Web.Repositories;
+using MiniMES.Web.Services;
 
 namespace MiniMES.Web.Infrastructure;
 
@@ -67,6 +68,41 @@ public sealed partial class DatabaseInitializer(SqlConnectionFactory factory, Pa
                 if (transaction.Connection is not null) await transaction.RollbackAsync();
                 throw;
             }
+        }
+    }
+
+    public async Task ResetUserPasswordAsync(string username, string password)
+    {
+        username = username.Trim();
+        if (username.Length is < 1 or > 50 || password.Length is < 12 or > 128 || string.IsNullOrWhiteSpace(password))
+            throw new InvalidOperationException("Cần MINIMES_RESET_USERNAME và MINIMES_RESET_PASSWORD (mật khẩu mới 12–128 ký tự).");
+
+        await using var connection = await factory.OpenAsync();
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
+        try
+        {
+            var user = await connection.QuerySingleOrDefaultAsync<UserAccount>("dbo.SYS_USER_ResetPassword", new
+            {
+                Username = username,
+                PasswordHash = hasher.HashPassword(new UserAccount(), password)
+            }, transaction, commandType: CommandType.StoredProcedure);
+            if (user is null) throw new BusinessException(404, "Không tìm thấy user để đặt lại mật khẩu.");
+
+            await audits.WriteAsync(connection, transaction, new AuditEntry
+            {
+                Who = "System", When = DateTime.UtcNow, WhereIp = "Local", ActionType = "PASSWORD_RESET",
+                EntityName = "SYS_USER", EntityId = user.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                OldDataJson = JsonSerializer.Serialize(new { user.Username, SessionVersion = user.SessionVersion - 1 }),
+                NewDataJson = JsonSerializer.Serialize(new { user.Username, user.SessionVersion, PasswordChanged = true }),
+                CorrelationId = Guid.NewGuid().ToString()
+            });
+            await transaction.CommitAsync();
+            logger.LogInformation("Password reset completed for user Id {UserId}; permissions unchanged", user.Id);
+        }
+        catch
+        {
+            if (transaction.Connection is not null) await transaction.RollbackAsync();
+            throw;
         }
     }
 

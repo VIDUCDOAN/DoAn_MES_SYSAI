@@ -19,7 +19,7 @@ public sealed class AuthService(UserRepository users, PasswordHasher<UserAccount
     public async Task<ClaimsPrincipal?> LoginAsync(string username, string password)
     {
         var user = await users.FindByUsernameAsync(username.Trim());
-        var verified = hasher.VerifyHashedPassword(user ?? new UserAccount(), user?.PasswordHash ?? timing.DummyHash, password);
+        var verified = PasswordVerification.Verify(hasher, user ?? new UserAccount(), user?.PasswordHash ?? timing.DummyHash, password);
         if (user is null || !user.IsActive || verified == PasswordVerificationResult.Failed)
             return null;
 

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MiniMES.Web.Infrastructure;
 using MiniMES.Web.Repositories;
+using MiniMES.Web.Services;
 using Xunit;
 
 namespace MiniMES.Tests;
@@ -208,6 +209,40 @@ public sealed class SqlServerTests(SqlServerFixture fixture)
         using var client = await fixture.LoginAsync();
         Assert.Equal(HttpStatusCode.NotFound, (await client.PutAsJsonAsync("/api/products/2147483647",
             new { modelCode = Code(), modelName = "Không tồn tại", version = 1 })).StatusCode);
+    }
+
+    [SqlServerFact]
+    public async Task PasswordResetKeepsPermissionsRevokesOldCookieAndDoesNotLogCredentials()
+    {
+        using var client = await fixture.LoginAsync("viewer");
+        await using var connection = new SqlConnection(fixture.ConnectionString);
+        var before = (await connection.QueryAsync<string>(
+            "SELECT FunctionCode FROM dbo.SYS_PERMISSION WHERE UserId = (SELECT Id FROM dbo.SYS_USER WHERE Username = @Username) ORDER BY FunctionCode",
+            new { Username = "viewer" })).ToArray();
+        var newPassword = Guid.NewGuid().ToString();
+        await using var scope = fixture.Factory.Services.CreateAsyncScope();
+        var initializer = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
+        try
+        {
+            await initializer.ResetUserPasswordAsync("viewer", newPassword);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/auth/me")).StatusCode);
+            var auth = scope.ServiceProvider.GetRequiredService<AuthService>();
+            Assert.NotNull(await auth.LoginAsync("viewer", newPassword));
+            Assert.Null(await auth.LoginAsync("viewer", fixture.ViewerPassword));
+            var after = (await connection.QueryAsync<string>(
+                "SELECT FunctionCode FROM dbo.SYS_PERMISSION WHERE UserId = (SELECT Id FROM dbo.SYS_USER WHERE Username = @Username) ORDER BY FunctionCode",
+                new { Username = "viewer" })).ToArray();
+            Assert.Equal(before, after);
+            var json = await connection.QuerySingleAsync<string>("""
+                SELECT TOP (1) NewDataJson FROM dbo.SYS_AUDIT_LOG
+                WHERE EntityName = 'SYS_USER' AND ActionType = 'PASSWORD_RESET'
+                  AND EntityId = CONVERT(NVARCHAR(100), (SELECT Id FROM dbo.SYS_USER WHERE Username = @Username))
+                ORDER BY Id DESC
+                """, new { Username = "viewer" });
+            Assert.DoesNotContain(newPassword, json);
+            Assert.False(JsonDocument.Parse(json).RootElement.TryGetProperty("PasswordHash", out _));
+        }
+        finally { await initializer.ResetUserPasswordAsync("viewer", fixture.ViewerPassword); }
     }
 
     [SqlServerFact]

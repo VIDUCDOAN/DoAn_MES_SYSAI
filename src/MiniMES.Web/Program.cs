@@ -9,7 +9,7 @@ using MiniMES.Web.Models;
 using MiniMES.Web.Repositories;
 using MiniMES.Web.Services;
 
-string[] managementFlags = ["--initialize-database", "--seed-demo-users"];
+string[] managementFlags = ["--initialize-database", "--seed-demo-users", "--reset-user-password"];
 var builder = WebApplication.CreateBuilder(args.Where(a => !managementFlags.Contains(a)).ToArray());
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true);
 // Biến môi trường luôn được ưu tiên hơn file cấu hình local.
@@ -57,12 +57,16 @@ builder.Services.AddScoped<SessionCookieEvents>();
 builder.Services.AddScoped<DatabaseInitializer>();
 
 var app = builder.Build();
-if (args.Contains("--initialize-database") || args.Contains("--seed-demo-users"))
+if (args.Any(managementFlags.Contains))
 {
     await using var scope = app.Services.CreateAsyncScope();
     var initializer = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
     if (args.Contains("--initialize-database")) await initializer.InitializeAsync();
     if (args.Contains("--seed-demo-users")) await initializer.SeedDemoUsersAsync();
+    if (args.Contains("--reset-user-password"))
+        await initializer.ResetUserPasswordAsync(
+            Environment.GetEnvironmentVariable("MINIMES_RESET_USERNAME") ?? "",
+            Environment.GetEnvironmentVariable("MINIMES_RESET_PASSWORD") ?? "");
     return;
 }
 

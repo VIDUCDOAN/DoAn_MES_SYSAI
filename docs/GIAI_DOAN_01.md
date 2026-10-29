@@ -173,3 +173,9 @@ Hiện không có `ConnectionStrings__MiniMes`, mật khẩu bootstrap hoặc co
 Đã lưu `install_script` và `start_skill` trong draft môi trường để giữ bước cài SDK/restore/build và hướng dẫn khởi động, gồm cả blocker SQL hiện tại. Restore `--locked-mode` đã chạy thành công. Draft chưa được publish; việc lưu này không khởi động SQL Server, không cấp credential và không chứng minh khôi phục được trong một task mới. Kestrel được dừng sau smoke test; không dựa vào tiến trình của phiên này để chạy ở task sau.
 
 Mốc 1 chỉ được nghiệm thu sau khi: DB khởi tạo và chạy lại được; đăng nhập thật; admin/viewer đúng quyền; UI thêm/sửa/ngừng dùng và audit đúng; test rollback/concurrency đạt trên SQL Server. Sau đó mới mở rộng một nhóm tiếp theo: **trạm + routing + Work Order cho một tuyến ba trạm**, giữ nguyên nền tảng MVC/Razor.
+
+## 8. Bổ sung khắc phục user nhập mật khẩu rõ
+
+Đã thêm CLI `--reset-user-password` dùng `MINIMES_RESET_USERNAME`/`MINIMES_RESET_PASSWORD`, cùng SP ở `004-reset-password.sql`. Băm bằng PasswordHasher, giữ nguyên user và FUN, tăng SessionVersion, ghi audit chỉ chứa metadata và không chứa hash/mật khẩu, trong cùng transaction. Đây là thao tác quản trị cục bộ dùng quyền DB, không là endpoint web công khai. Tham khảo lệnh PowerShell trong README, mật khẩu mới dài 12–128 ký tự.
+
+Luồng xác thực bắt FormatException từ hash không hợp lệ và từ chối đăng nhập; không có nhánh so sánh mật khẩu dạng rõ. Kiểm chứng mới: build 0 warning/error; 16 test đạt, 9 test SQL skipped. Bốn ca mới không cần DB kiểm tra malformed/truncated/empty hash và hash hợp lệ với mật khẩu đúng/sai. Ca SQL mới kiểm tra reset giữ quyền, thu hồi cookie và audit không chứa credential; chưa chạy do thiếu SQL Server. Kết quả mới lưu tại `TestResults/password-reset.trx`; bảng kết quả mốc ban đầu phía trên giữ số liệu lịch sử.

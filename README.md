@@ -82,6 +82,27 @@ Remove-Item Env:MINIMES_ADMIN_PASSWORD, Env:MINIMES_VIEWER_PASSWORD
 
 Linux có thể dùng `read -rsp` rồi `export` cho hai biến tương ứng, chạy cùng lệnh CLI và `unset` sau đó. Không có mật khẩu mặc định trong dự án. Mật khẩu được băm bằng `PasswordHasher`; bootstrap không sửa tài khoản đã tồn tại. `admin` nhận năm FUN ban đầu; `viewer` chỉ có `MODEL_VIEW`. Việc tạo tài khoản/quyền mẫu và audit diễn ra cùng transaction cho từng tài khoản, audit không chứa hash/mật khẩu.
 
+### Đặt lại mật khẩu của user đã nhập tay
+
+Không nhập mật khẩu rõ vào `PasswordHash`, không dùng MD5/SHA256 hoặc SQL HASHBYTES thay cho PasswordHasher của ASP.NET Core. Lệnh sau dành cho người quản trị máy/DB, không mở thành endpoint anonymous. Giữ nguyên Id và FUN, băm mật khẩu mới, tăng SessionVersion để vô hiệu hóa cookie cũ và ghi audit cùng transaction; không ghi mật khẩu hoặc hash vào audit.
+
+Sau khi cập nhật code, chạy PowerShell tại thư mục repository trong cửa sổ đã cấu hình `ConnectionStrings__MiniMes`:
+
+```powershell
+dotnet build MiniMES.slnx
+dotnet run --project src/MiniMES.Web --no-build -- --initialize-database
+
+$env:MINIMES_RESET_USERNAME = 'VIDDOAN'
+$env:MINIMES_RESET_PASSWORD = [System.Net.NetworkCredential]::new('', (Read-Host 'Mật khẩu mới (12–128 ký tự)' -AsSecureString)).Password
+try {
+    dotnet run --project src/MiniMES.Web --no-build -- --reset-user-password
+} finally {
+    Remove-Item Env:MINIMES_RESET_PASSWORD, Env:MINIMES_RESET_USERNAME -ErrorAction SilentlyContinue
+}
+```
+
+Thay `VIDDOAN` nếu cần thao tác user khác. Khởi tạo lại để bổ sung SP `SYS_USER_ResetPassword`; không tự xóa user hoặc quyền hiện có. Sau khi reset thành công, đăng nhập bằng mật khẩu mới vừa nhập. Hash sai định dạng bị từ chối như đăng nhập sai, không còn ném FormatException lên trang lỗi 500.
+
 ## 3. Chạy web
 
 ```bash
@@ -143,4 +164,4 @@ dotnet test tests/MiniMES.Tests --no-build --no-restore --filter Category=SqlSer
 
 Fixture từ chối DB có tên khác để tránh chạy fault injection trên dữ liệu phát triển/production. Ca rollback tạo và gỡ trigger cố ý gây lỗi audit trong DB test. Nhóm này tạo dữ liệu có mã ngẫu nhiên và giữ lại để kiểm tra; mỗi lần chạy thêm dữ liệu. Chạy lại dùng cùng mật khẩu test; bootstrap không đặt lại mật khẩu tài khoản đã có. Chỉ xóa/tạo lại DB thử khi chủ động muốn dọn dữ liệu.
 
-**Thiếu connection string → 8 ca SQL được ghi SKIPPED, không phải PASSED.** Phải cung cấp SQL Server và chạy lại trước khi xác nhận đăng nhập thật, CRUD, rollback và concurrency đã đạt.
+**Thiếu connection string → 9 ca SQL được ghi SKIPPED, không phải PASSED.** Phải cung cấp SQL Server và chạy lại trước khi xác nhận đăng nhập thật, CRUD, rollback, reset mật khẩu và concurrency đã đạt. Bản bổ sung reset mật khẩu hiện có 16 test không cần SQL đạt, gồm kiểm tra hash sai định dạng và PasswordHasher.
