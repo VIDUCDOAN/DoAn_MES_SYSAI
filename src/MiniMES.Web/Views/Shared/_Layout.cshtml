@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] · MiniMES</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script src="~/js/site.js" asp-append-version="true" defer></script>
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <a class="brand" asp-controller="Home" asp-action="Index"><span class="brand-mark">M</span> MiniMES</a>
+            <p class="sidebar-caption">QUẢN LÝ SẢN XUẤT</p>
+            <nav aria-label="Điều hướng chính">
+                <a asp-controller="Home" asp-action="Index">Tổng quan</a>
+                @if (User.HasClaim(Permissions.ClaimType, Permissions.ProductView))
+                {
+                    <a asp-controller="Products" asp-action="Index">Sản phẩm</a>
+                }
+                @if (User.HasClaim(Permissions.ClaimType, Permissions.AuditView))
+                {
+                    <a asp-controller="AuditLogs" asp-action="Index">Nhật ký thay đổi</a>
+                }
+            </nav>
+            <div class="sidebar-footer">MiniMES<br /><span>Không gian quản lý sản xuất</span></div>
+        </aside>
+        <div class="workspace">
+            <header class="topbar">
+                <span>HỆ THỐNG ĐIỀU HÀNH SẢN XUẤT</span>
+                <div class="account">
+                    <strong>@User.FindFirst("FullName")?.Value</strong>
+                    <form asp-controller="Account" asp-action="Logout" method="post">
+                        <button class="button button-quiet" type="submit">Đăng xuất</button>
+                    </form>
+                </div>
+            </header>
+            <main id="main-content">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

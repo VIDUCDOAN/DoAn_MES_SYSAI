@@ -1,0 +1,14 @@
+@{
+    ViewData["Title"] = "Nhật ký thay đổi";
+}
+<div class="page-heading"><div><p class="eyebrow">TRUY VẾT DỮ LIỆU</p><h1>Nhật ký thay đổi</h1><p class="muted">200 thay đổi gần nhất. Thời gian hiển thị theo giờ Việt Nam.</p></div>
+    <button class="button" type="button" id="reload-audits">Tải lại</button>
+</div>
+<div id="page-message" class="message" role="status" aria-live="polite" hidden></div>
+<section class="panel table-panel"><div class="table-scroll"><table>
+    <thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Địa chỉ IP</th><th>Thao tác</th><th>Đối tượng</th><th>Dữ liệu trước / sau</th></tr></thead>
+    <tbody id="audits-body"><tr><td colspan="6">Đang tải dữ liệu…</td></tr></tbody>
+</table></div></section>
+@section Scripts {
+    <script src="~/js/audits.js" asp-append-version="true" defer></script>
+}

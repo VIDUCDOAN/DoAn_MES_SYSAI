@@ -1,0 +1,45 @@
+@{
+    ViewData["Title"] = "Sản phẩm";
+    var canAdd = User.HasClaim(Permissions.ClaimType, Permissions.ProductAdd);
+    var canEdit = User.HasClaim(Permissions.ClaimType, Permissions.ProductEdit);
+    var canDelete = User.HasClaim(Permissions.ClaimType, Permissions.ProductDelete);
+}
+<div class="page-heading">
+    <div><p class="eyebrow">DỮ LIỆU SẢN XUẤT</p><h1>Danh mục sản phẩm</h1><p class="muted">Quản lý mã, tên và thông tin mô tả sản phẩm.</p></div>
+    <button type="button" id="reload-products" class="button">Tải lại danh sách</button>
+</div>
+<div id="page-message" role="status" aria-live="polite" class="message" hidden></div>
+@if (canAdd || canEdit)
+{
+    <section class="panel" id="product-editor" data-can-add="@canAdd.ToString().ToLowerInvariant()">
+        <h2 id="editor-title">@(canAdd ? "Thêm sản phẩm" : "Thông tin sản phẩm")</h2>
+        <form id="product-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="product-id" value="0" />
+            <input type="hidden" id="product-version" value="0" />
+            <div class="form-grid">
+                <div><label for="model-code">Mã sản phẩm <span aria-hidden="true">*</span></label>
+                    <input id="model-code" name="modelCode" required minlength="2" maxlength="50" pattern="[A-Z0-9][A-Z0-9_-]+" placeholder="Ví dụ: SP001" /></div>
+                <div><label for="model-name">Tên sản phẩm <span aria-hidden="true">*</span></label>
+                    <input id="model-name" name="modelName" required minlength="2" maxlength="200" /></div>
+                <div class="span-two"><label for="description">Mô tả</label>
+                    <textarea id="description" name="description" maxlength="1000" rows="2"></textarea></div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="button button-primary" id="save-product" disabled="@(!canAdd)">Lưu sản phẩm</button>
+                <button type="button" class="button button-quiet" id="cancel-edit">Hủy chỉnh sửa</button>
+            </div>
+        </form>
+    </section>
+}
+<section class="panel table-panel" id="product-list" data-can-edit="@canEdit.ToString().ToLowerInvariant()" data-can-delete="@canDelete.ToString().ToLowerInvariant()">
+    <div class="section-heading"><h2>Sản phẩm đang sử dụng</h2><span class="muted" id="product-count">Đang tải…</span></div>
+    <p class="muted table-note">Hiển thị tối đa 200 sản phẩm mới nhất. Ngừng sử dụng sẽ giữ lại lịch sử sản phẩm.</p>
+    <div class="table-scroll"><table>
+        <thead><tr><th>Mã sản phẩm</th><th>Tên sản phẩm</th><th>Mô tả</th><th>Thao tác</th></tr></thead>
+        <tbody id="products-body"><tr><td colspan="4">Đang tải dữ liệu…</td></tr></tbody>
+    </table></div>
+</section>
+@section Scripts {
+    <script src="~/js/products.js" asp-append-version="true" defer></script>
+}

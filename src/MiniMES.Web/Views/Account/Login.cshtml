@@ -1,0 +1,30 @@
+@model LoginDto
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Đăng nhập · MiniMES</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="login-body">
+    <main class="login-card">
+        <div class="brand login-brand"><span class="brand-mark">M</span> MiniMES</div>
+        <p class="eyebrow">KHÔNG GIAN LÀM VIỆC</p>
+        <h1>Chào mừng trở lại</h1>
+        <p class="muted">Đăng nhập để truy cập các chức năng được cấp quyền.</p>
+        <form asp-controller="Account" asp-action="Login" method="post">
+            <div asp-validation-summary="All" class="message error" role="alert"></div>
+            <label asp-for="Username">Tên đăng nhập</label>
+            <input asp-for="Username" autocomplete="username" required maxlength="50" autofocus />
+            <label asp-for="Password">Mật khẩu</label>
+            <input asp-for="Password" type="password" autocomplete="current-password" required maxlength="128" />
+            <button type="submit" class="button button-primary full-width">Đăng nhập</button>
+        </form>
+        <p class="login-note">Liên hệ quản trị viên nếu bạn chưa có tài khoản.</p>
+    </main>
+</body>
+</html>

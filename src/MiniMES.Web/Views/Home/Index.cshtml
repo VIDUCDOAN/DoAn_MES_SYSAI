@@ -1,0 +1,22 @@
+@{
+    ViewData["Title"] = "Tổng quan";
+}
+<div class="page-heading">
+    <div><p class="eyebrow">KHÔNG GIAN LÀM VIỆC</p><h1>Tổng quan</h1><p class="muted">Chọn chức năng để bắt đầu làm việc.</p></div>
+</div>
+<div class="feature-grid">
+    @if (User.HasClaim(Permissions.ClaimType, Permissions.ProductView))
+    {
+        <a class="panel feature-card" asp-controller="Products" asp-action="Index">
+            <span class="feature-icon">SP</span><h2>Danh mục sản phẩm</h2>
+            <p>Tra cứu và quản lý thông tin sản phẩm.</p><span class="text-link">Mở danh mục →</span>
+        </a>
+    }
+    @if (User.HasClaim(Permissions.ClaimType, Permissions.AuditView))
+    {
+        <a class="panel feature-card" asp-controller="AuditLogs" asp-action="Index">
+            <span class="feature-icon">NK</span><h2>Nhật ký thay đổi</h2>
+            <p>Tra cứu người thực hiện và lịch sử thay đổi dữ liệu.</p><span class="text-link">Xem nhật ký →</span>
+        </a>
+    }
+</div>
